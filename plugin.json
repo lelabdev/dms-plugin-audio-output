@@ -1,0 +1,13 @@
+{
+    "id": "audioOutputToggle",
+    "name": "Audio Output Toggle",
+    "description": "Quickly switch between audio outputs (speakers, headphones, etc.) from the DankBar",
+    "version": "1.0.0",
+    "author": "Mako",
+    "type": "widget",
+    "capabilities": ["dankbar-widget"],
+    "component": "./AudioOutputWidget.qml",
+    "icon": "headset",
+    "requires_dms": ">=0.3.0",
+    "permissions": []
+}
