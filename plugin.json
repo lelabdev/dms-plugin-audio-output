@@ -1,9 +1,9 @@
 {
     "id": "audioOutputToggle",
     "name": "Audio Output Toggle",
-    "description": "Quickly switch between audio outputs from the DankBar and choose which devices are included in the cycle",
+    "description": "Cycle through audio output devices from the DMS bar with one click. Right-click to choose which speakers, headphones or other devices to include; your selections persist across restarts and reconnects.",
     "version": "1.1.2",
-    "author": "LoopsLudo & Mako",
+    "author": "LudoLoops",
     "type": "widget",
     "capabilities": ["dankbar-widget"],
     "component": "./AudioOutputWidget.qml",
