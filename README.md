@@ -30,19 +30,22 @@ Tested with DMS 2.0.0 and Quickshell 0.3.2 on Hyprland.
 
 ## Installation
 
-### From the plugin registry
-
-```bash
-dms plugins install audioOutputToggle
-dms ipc call plugins enable audioOutputToggle
-```
-
-### From source
+### From source (available now)
 
 ```bash
 git clone https://github.com/lelabdev/dms-plugin-audio-output.git \
-  ~/.config/DankMaterialShell/plugins/audioOutputToggle
+  ~/.config/dms/plugins/audioOutputToggle
 
+dms ipc call plugins enable audioOutputToggle
+```
+
+### From the plugin registry (after registry approval)
+
+The official registry entry is still being restored. Until it is published, use
+the source installation above. Once the entry is available:
+
+```bash
+dms plugins install audioOutputToggle
 dms ipc call plugins enable audioOutputToggle
 ```
 
@@ -67,17 +70,17 @@ dms ipc call plugins reload audioOutputToggle
 
 ## Uninstall
 
-If installed from the registry:
-
-```bash
-dms plugins uninstall audioOutputToggle
-```
-
 If installed from source:
 
 ```bash
 dms ipc call plugins disable audioOutputToggle
-rm -rf ~/.config/DankMaterialShell/plugins/audioOutputToggle
+rm -rf ~/.config/dms/plugins/audioOutputToggle
+```
+
+If installed from the plugin registry after its approval:
+
+```bash
+dms plugins uninstall audioOutputToggle
 ```
 
 ## License
