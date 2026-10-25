@@ -1,8 +1,7 @@
 import QtQuick
-import Quickshell.Services.Pipewire
 import qs.Common
 import qs.Services
-import qs.Widgets
+import qs.DCommon.Widgets
 import qs.Modules.Plugins
 
 PluginComponent {
@@ -10,20 +9,20 @@ PluginComponent {
 
     // --- State ---
     property var currentSink: AudioService.sink
-    property bool isUsb: currentSink?.name?.includes("usb") ?? false
-    property int volumePercent: currentSink?.audio ? Math.round(currentSink.audio.volume * 100) : 0
+    property int volumePercent: {
+        const volume = currentSink?.audio?.volume;
+        if (!Number.isFinite(volume))
+            return 0;
+        return Math.min(AudioService.getMaxVolumePercent(currentSink), Math.round(volume * 100));
+    }
+    readonly property string volumeLabel: Number.isFinite(currentSink?.audio?.volume) ? `${volumePercent}%` : "--"
 
     // Names of outputs excluded from cycling. Stored by PipeWire node name so the
     // preference survives reconnects and list reordering.
     readonly property string excludedOutputsKey: "excludedOutputs"
     property var excludedOutputs: Array.isArray(pluginData.excludedOutputs) ? pluginData.excludedOutputs : []
 
-    // Use AudioService's backend-agnostic node list when available, and fall
-    // back to PipeWire directly on older DMS versions.
-    readonly property var connectedOutputs: {
-        const nodes = AudioService.allNodes || Pipewire.nodes.values || [];
-        return nodes.filter(node => node && node.name && node.audio && node.isSink && !node.isStream);
-    }
+    readonly property var connectedOutputs: AudioService.allNodes.filter(node => node && node.name && node.audio && node.isSink && !node.isStream)
 
     readonly property var displayOutputs: {
         const outputs = connectedOutputs.slice();
@@ -33,10 +32,10 @@ PluginComponent {
 
     // --- Helpers ---
     function sinkIcon() {
-        if (!currentSink?.audio || currentSink.audio.muted) return "volume_off";
-        if (volumePercent === 0) return "volume_mute";
-        if (volumePercent <= 33) return "volume_down";
-        return isUsb ? "headset" : "speaker";
+        if (!currentSink?.audio) return "volume_off";
+        if (currentSink.audio.muted) return "volume_off";
+        if (currentSink.audio.volume === 0) return "volume_mute";
+        return AudioService.sinkIcon(currentSink);
     }
 
     function outputName(node) {
@@ -92,7 +91,7 @@ PluginComponent {
             return;
         }
 
-        const currentName = currentSink?.name ?? "";
+        const currentName = AudioService.sink?.name ?? "";
         const currentIndex = enabled.findIndex(node => node.name === currentName);
         const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % enabled.length;
         const nextSink = enabled[nextIndex];
@@ -104,28 +103,48 @@ PluginComponent {
             ToastService.showInfo(outputName(nextSink));
     }
 
-    function changeVolume(delta) {
-        if (!currentSink?.audio) return;
-        currentSink.audio.muted = false;
-        var newVol = Math.max(0, Math.min(AudioService.sinkMaxVolume / 100, currentSink.audio.volume + delta / 100));
-        currentSink.audio.volume = newVol;
+    function adjustVolume(direction) {
+        if (!AudioService.sink?.audio)
+            return;
+        AudioService.adjustDefaultSinkVolume(AudioService.wheelVolumeStep, direction);
         AudioService.playVolumeChangeSoundIfEnabled();
     }
+
+    function cycleOutputAction() {
+        root.cycleOutput();
+    }
+
+    // triggerPopout() prefers pillClickAction when it is set, so clear it
+    // briefly to open the selection panel from the right-click action.
+    property var leftClickAction: root.cycleOutputAction
+
+    function openOutputPanel() {
+        const leftAction = root.leftClickAction;
+        root.leftClickAction = null;
+        try {
+            root.triggerPopout();
+        } finally {
+            root.leftClickAction = leftAction;
+        }
+    }
+
+    pillClickAction: root.leftClickAction
+    pillRightClickAction: () => root.openOutputPanel()
 
     // --- Bar pill (horizontal) ---
     horizontalBarPill: Row {
         spacing: Theme.spacingXS
 
-        DankIcon {
-            name: sinkIcon()
-            size: Theme.barIconSize(root.barThickness, -4)
-            color: Theme.primary
+        DIcon {
+            name: root.sinkIcon()
+            size: root.iconSize
+            color: Theme.widgetIconColor
             anchors.verticalCenter: parent.verticalCenter
         }
 
         StyledText {
-            text: `${volumePercent}%`
-            font.pixelSize: Theme.barTextSize(root.barThickness)
+            text: root.volumeLabel
+            font.pixelSize: root.textSize
             color: Theme.widgetTextColor
             anchors.verticalCenter: parent.verticalCenter
         }
@@ -133,18 +152,18 @@ PluginComponent {
 
     // --- Bar pill (vertical) ---
     verticalBarPill: Column {
-        spacing: 1
+        spacing: Theme.spacingXXS
 
-        DankIcon {
-            name: sinkIcon()
-            size: Theme.barIconSize(root.barThickness, -4)
-            color: Theme.primary
+        DIcon {
+            name: root.sinkIcon()
+            size: root.iconSize
+            color: Theme.widgetIconColor
             anchors.horizontalCenter: parent.horizontalCenter
         }
 
         StyledText {
-            text: `${volumePercent}%`
-            font.pixelSize: Theme.barTextSize(root.barThickness)
+            text: root.volumeLabel
+            font.pixelSize: root.textSize
             color: Theme.widgetTextColor
             anchors.horizontalCenter: parent.horizontalCenter
         }
@@ -183,7 +202,7 @@ PluginComponent {
                         border.width: outputCard.included ? 0 : 1
                         border.color: Qt.rgba(Theme.outline.r, Theme.outline.g, Theme.outline.b, 0.08)
 
-                        DankRipple {
+                        DRipple {
                             id: cardRipple
                             cornerRadius: outputCard.radius
                         }
@@ -196,7 +215,7 @@ PluginComponent {
                             anchors.rightMargin: Theme.spacingM
                             spacing: Theme.spacingS
 
-                            DankIcon {
+                            DIcon {
                                 name: AudioService.sinkIcon(outputCard.modelData)
                                 size: Theme.iconSize
                                 color: outputCard.included ? Theme.ccTileActiveText : Theme.surfaceVariantText
@@ -236,25 +255,18 @@ PluginComponent {
         }
     }
 
-    // --- Click to cycle output, right-click for the inclusion panel, wheel to change volume ---
-    MouseArea {
-        anchors.fill: parent
-        hoverEnabled: true
-        cursorShape: Qt.PointingHandCursor
-        acceptedButtons: Qt.LeftButton | Qt.RightButton
-        onClicked: mouse => {
-            if (mouse.button === Qt.RightButton)
-                root.triggerPopout();
-            else
-                root.cycleOutput();
-        }
-        onWheel: wheel => {
-            const step = AudioService.wheelVolumeStep ?? AudioService.volumeStep ?? 5;
-            if (wheel.angleDelta.y > 0) {
-                root.changeVolume(step);
-            } else if (wheel.angleDelta.y < 0) {
-                root.changeVolume(-step);
-            }
+    // Keep backend device lists current while this widget is alive.
+    Component.onCompleted: AudioService.addRef()
+    Component.onDestruction: AudioService.removeRef()
+
+    // Volume wheel, without a MouseArea overlaying the bar pill.
+    WheelHandler {
+        onWheel: event => {
+            const direction = event.angleDelta.y > 0 ? 1 : (event.angleDelta.y < 0 ? -1 : 0);
+            if (direction === 0)
+                return;
+            root.adjustVolume(direction);
+            event.accepted = true;
         }
     }
 }
