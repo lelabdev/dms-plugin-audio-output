@@ -1,7 +1,9 @@
 # Audio Output Toggle — DMS Plugin
 
-Quickly switch between audio outputs from the DankBar and choose which devices
-are included in the cycle.
+Switch the active audio output directly from the DMS bar without opening audio
+settings. Left-click to cycle between your chosen speakers, headphones or other
+outputs. Right-click to open a device list and choose which outputs to include
+in the cycle; preferences survive restarts and temporary disconnections.
 
 ![Audio Output Toggle selection panel](assets/audio-output-toggle-panel.png)
 
