@@ -46,8 +46,8 @@ rm -rf ~/.config/DankMaterialShell/plugins/audioOutputToggle
 
 ## Requirements
 
-- DMS (DankMaterialShell) >= 0.3.0
-- PipeWire (for Pipewire.defaultAudioSink / preferredDefaultAudioSink)
+- DMS (DankMaterialShell) >= 2.0.0
+- PipeWire (for the DMS audio backend)
 
 ## License
 
